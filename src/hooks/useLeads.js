@@ -5,14 +5,16 @@ import { supabase, LEADS_TABLE } from '../lib/supabaseClient'
 function rowToLead(row) {
   return {
     id: row.id,
-    name: row.name,
-    phone: row.phone_number ?? '',
+    name: row.full_name,
+    company: row.company,
     email: row.email,
-    company: row.company_name,
-    serviceInterested: row.service_interested ?? '',
-    source: row.lead_source ?? 'Website',
-    status: row.lead_status,
-    notes: row.notes ?? '',
+    phone: row.phone ?? '',
+    source: row.source ?? 'Website',
+    status: row.status,
+    dealValue: row.deal_value ?? 0,
+    owner: row.owner ?? '',
+    aadhaarNumber: row.aadhaar_number ?? '',
+    panNumber: row.pan_number ?? '',
     createdAt: row.created_date,
   }
 }
@@ -20,14 +22,16 @@ function rowToLead(row) {
 // Maps the app's lead shape back to Supabase columns for insert/update.
 function leadToRow(lead) {
   return {
-    name: lead.name,
-    phone_number: lead.phone || null,
+    full_name: lead.name,
+    company: lead.company,
     email: lead.email,
-    company_name: lead.company,
-    service_interested: lead.serviceInterested || null,
-    lead_source: lead.source,
-    lead_status: lead.status,
-    notes: lead.notes || null,
+    phone: lead.phone || null,
+    source: lead.source,
+    status: lead.status,
+    deal_value: lead.dealValue === '' || lead.dealValue == null ? 0 : Number(lead.dealValue),
+    owner: lead.owner || null,
+    aadhaar_number: lead.aadhaarNumber || null,
+    pan_number: lead.panNumber ? lead.panNumber.toUpperCase() : null,
   }
 }
 
@@ -98,7 +102,7 @@ export function useLeads() {
   const updateStatus = useCallback(async (id, status) => {
     const { data, error: statusError } = await supabase
       .from(LEADS_TABLE)
-      .update({ lead_status: status })
+      .update({ status })
       .eq('id', id)
       .select()
       .single()

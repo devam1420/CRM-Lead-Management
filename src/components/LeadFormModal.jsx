@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { X, ShieldAlert } from 'lucide-react'
 import { STATUSES, SOURCES } from '../data/constants'
 
 const emptyForm = {
@@ -7,10 +7,12 @@ const emptyForm = {
   email: '',
   phone: '',
   company: '',
-  serviceInterested: '',
   source: SOURCES[0],
   status: STATUSES[0],
-  notes: '',
+  dealValue: '',
+  owner: '',
+  aadhaarNumber: '',
+  panNumber: '',
 }
 
 export default function LeadFormModal({ open, lead, onClose, onSave }) {
@@ -19,7 +21,7 @@ export default function LeadFormModal({ open, lead, onClose, onSave }) {
 
   useEffect(() => {
     if (open) {
-      setForm(lead ? { ...emptyForm, ...lead } : emptyForm)
+      setForm(lead ? { ...emptyForm, ...lead, dealValue: lead.dealValue ?? '' } : emptyForm)
       setErrors({})
     }
   }, [open, lead])
@@ -34,10 +36,16 @@ export default function LeadFormModal({ open, lead, onClose, onSave }) {
 
   const validate = () => {
     const next = {}
-    if (!form.name.trim()) next.name = 'Name is required'
+    if (!form.name.trim()) next.name = 'Full name is required'
     if (!form.email.trim()) next.email = 'Email is required'
     else if (!/^\S+@\S+\.\S+$/.test(form.email)) next.email = 'Enter a valid email'
-    if (!form.company.trim()) next.company = 'Company name is required'
+    if (!form.company.trim()) next.company = 'Company is required'
+    if (form.aadhaarNumber && !/^\d{4}\s?\d{4}\s?\d{4}$/.test(form.aadhaarNumber.trim())) {
+      next.aadhaarNumber = 'Enter 12 digits, e.g. 1234 5678 9012'
+    }
+    if (form.panNumber && !/^[A-Za-z]{5}\d{4}[A-Za-z]$/.test(form.panNumber.trim())) {
+      next.panNumber = 'Format: ABCDE1234F'
+    }
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -45,7 +53,11 @@ export default function LeadFormModal({ open, lead, onClose, onSave }) {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!validate()) return
-    onSave({ ...form })
+    onSave({
+      ...form,
+      dealValue: form.dealValue === '' ? 0 : Number(form.dealValue),
+      panNumber: form.panNumber ? form.panNumber.toUpperCase() : '',
+    })
   }
 
   return (
@@ -64,7 +76,7 @@ export default function LeadFormModal({ open, lead, onClose, onSave }) {
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Name" error={errors.name}>
+            <Field label="Full Name" error={errors.name}>
               <input
                 value={form.name}
                 onChange={handleChange('name')}
@@ -72,7 +84,7 @@ export default function LeadFormModal({ open, lead, onClose, onSave }) {
                 className={inputClass(errors.name)}
               />
             </Field>
-            <Field label="Company Name" error={errors.company}>
+            <Field label="Company" error={errors.company}>
               <input
                 value={form.company}
                 onChange={handleChange('company')}
@@ -92,7 +104,7 @@ export default function LeadFormModal({ open, lead, onClose, onSave }) {
                 className={inputClass(errors.email)}
               />
             </Field>
-            <Field label="Phone Number">
+            <Field label="Phone">
               <input
                 value={form.phone}
                 onChange={handleChange('phone')}
@@ -102,17 +114,8 @@ export default function LeadFormModal({ open, lead, onClose, onSave }) {
             </Field>
           </div>
 
-          <Field label="Service Interested">
-            <input
-              value={form.serviceInterested}
-              onChange={handleChange('serviceInterested')}
-              placeholder="e.g. Enterprise Plan, Product Demo, Consulting..."
-              className={inputClass()}
-            />
-          </Field>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Lead Source">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Field label="Source">
               <select value={form.source} onChange={handleChange('source')} className={inputClass()}>
                 {SOURCES.map((s) => (
                   <option key={s} value={s}>
@@ -121,7 +124,7 @@ export default function LeadFormModal({ open, lead, onClose, onSave }) {
                 ))}
               </select>
             </Field>
-            <Field label="Lead Status">
+            <Field label="Status">
               <select value={form.status} onChange={handleChange('status')} className={inputClass()}>
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -130,17 +133,54 @@ export default function LeadFormModal({ open, lead, onClose, onSave }) {
                 ))}
               </select>
             </Field>
+            <Field label="Deal Value ($)">
+              <input
+                type="number"
+                min="0"
+                value={form.dealValue}
+                onChange={handleChange('dealValue')}
+                placeholder="0"
+                className={inputClass()}
+              />
+            </Field>
           </div>
 
-          <Field label="Notes">
-            <textarea
-              value={form.notes}
-              onChange={handleChange('notes')}
-              rows={3}
-              placeholder="Any relevant context about this lead..."
-              className={inputClass() + ' resize-none'}
+          <Field label="Owner">
+            <input
+              value={form.owner}
+              onChange={handleChange('owner')}
+              placeholder="Who owns this lead internally"
+              className={inputClass()}
             />
           </Field>
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 flex items-start gap-2">
+            <ShieldAlert size={15} className="text-amber-600 mt-0.5 shrink-0" />
+            <p className="text-xs text-amber-800">
+              Aadhaar and PAN are sensitive government IDs — only masked values are shown in the table. Leave
+              blank unless you actually need to collect them.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Aadhaar Number" error={errors.aadhaarNumber}>
+              <input
+                value={form.aadhaarNumber}
+                onChange={handleChange('aadhaarNumber')}
+                placeholder="1234 5678 9012"
+                className={inputClass(errors.aadhaarNumber)}
+              />
+            </Field>
+            <Field label="PAN Number" error={errors.panNumber}>
+              <input
+                value={form.panNumber}
+                onChange={handleChange('panNumber')}
+                placeholder="ABCDE1234F"
+                maxLength={10}
+                className={inputClass(errors.panNumber) + ' uppercase'}
+              />
+            </Field>
+          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <button

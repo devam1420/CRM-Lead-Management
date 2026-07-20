@@ -3,7 +3,9 @@ import { Pencil, Trash2, Mail, Phone, Inbox } from 'lucide-react'
 import StatusBadge from './StatusBadge'
 import ConfirmDialog from './ConfirmDialog'
 import { STATUSES, STATUS_STYLES } from '../data/constants'
+import { maskAadhaar, maskPan } from '../lib/mask'
 
+const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 const dateFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
 export default function LeadsTable({ leads, search, onEdit, onDelete, onStatusChange }) {
@@ -66,10 +68,12 @@ export default function LeadsTable({ leads, search, onEdit, onDelete, onStatusCh
               <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-400 border-b border-slate-100">
                 <th className="px-5 py-3 font-semibold">Lead</th>
                 <th className="px-5 py-3 font-semibold hidden md:table-cell">Company</th>
-                <th className="px-5 py-3 font-semibold hidden lg:table-cell">Service Interested</th>
                 <th className="px-5 py-3 font-semibold hidden lg:table-cell">Source</th>
                 <th className="px-5 py-3 font-semibold">Status</th>
-                <th className="px-5 py-3 font-semibold hidden xl:table-cell">Created</th>
+                <th className="px-5 py-3 font-semibold hidden sm:table-cell">Deal Value</th>
+                <th className="px-5 py-3 font-semibold hidden lg:table-cell">Owner</th>
+                <th className="px-5 py-3 font-semibold hidden xl:table-cell">Aadhaar</th>
+                <th className="px-5 py-3 font-semibold hidden xl:table-cell">PAN</th>
                 <th className="px-5 py-3 font-semibold text-right">Actions</th>
               </tr>
             </thead>
@@ -95,7 +99,6 @@ export default function LeadsTable({ leads, search, onEdit, onDelete, onStatusCh
                     </div>
                   </td>
                   <td className="px-5 py-3.5 hidden md:table-cell text-slate-600">{lead.company || '—'}</td>
-                  <td className="px-5 py-3.5 hidden lg:table-cell text-slate-600">{lead.serviceInterested || '—'}</td>
                   <td className="px-5 py-3.5 hidden lg:table-cell text-slate-500">{lead.source || '—'}</td>
                   <td className="px-5 py-3.5">
                     <select
@@ -110,8 +113,15 @@ export default function LeadsTable({ leads, search, onEdit, onDelete, onStatusCh
                       ))}
                     </select>
                   </td>
-                  <td className="px-5 py-3.5 hidden xl:table-cell text-slate-400 whitespace-nowrap">
-                    {lead.createdAt ? dateFmt.format(new Date(lead.createdAt)) : '—'}
+                  <td className="px-5 py-3.5 hidden sm:table-cell text-slate-600 font-medium">
+                    {lead.dealValue ? currency.format(lead.dealValue) : '—'}
+                  </td>
+                  <td className="px-5 py-3.5 hidden lg:table-cell text-slate-600">{lead.owner || '—'}</td>
+                  <td className="px-5 py-3.5 hidden xl:table-cell text-slate-400 font-mono text-xs whitespace-nowrap">
+                    {lead.aadhaarNumber ? maskAadhaar(lead.aadhaarNumber) : '—'}
+                  </td>
+                  <td className="px-5 py-3.5 hidden xl:table-cell text-slate-400 font-mono text-xs whitespace-nowrap">
+                    {lead.panNumber ? maskPan(lead.panNumber) : '—'}
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center justify-end gap-1">

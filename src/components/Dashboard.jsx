@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
-import { Users2, TrendingUp, Trophy, Sparkles } from 'lucide-react'
+import { Users2, TrendingUp, Trophy, DollarSign } from 'lucide-react'
 import StatCard from './StatCard'
 import StatusBadge from './StatusBadge'
 import { STATUSES, STATUS_STYLES } from '../data/constants'
 
+const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 const dateFmt = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
 
 export default function Dashboard({ leads, onNavigateToLeads }) {
@@ -11,7 +12,9 @@ export default function Dashboard({ leads, onNavigateToLeads }) {
     const total = leads.length
     const won = leads.filter((l) => l.status === 'Won')
     const lost = leads.filter((l) => l.status === 'Lost')
-    const newLeads = leads.filter((l) => l.status === 'New')
+    const openLeads = leads.filter((l) => !['Won', 'Lost'].includes(l.status))
+    const pipelineValue = openLeads.reduce((sum, l) => sum + (Number(l.dealValue) || 0), 0)
+    const wonValue = won.reduce((sum, l) => sum + (Number(l.dealValue) || 0), 0)
     const closed = won.length + lost.length
     const winRate = closed > 0 ? Math.round((won.length / closed) * 100) : 0
 
@@ -20,30 +23,26 @@ export default function Dashboard({ leads, onNavigateToLeads }) {
       count: leads.filter((l) => l.status === status).length,
     }))
 
-    const bySource = Object.entries(
-      leads.reduce((acc, l) => {
-        const key = l.source || 'Other'
-        acc[key] = (acc[key] || 0) + 1
-        return acc
-      }, {})
-    ).sort((a, b) => b[1] - a[1])
-
     const recent = [...leads]
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, 5)
 
-    return { total, won: won.length, newLeads: newLeads.length, winRate, byStatus, bySource, recent }
+    return { total, won: won.length, pipelineValue, wonValue, winRate, byStatus, recent }
   }, [leads])
 
-  const maxStatusCount = Math.max(...stats.byStatus.map((s) => s.count), 1)
-  const maxSourceCount = Math.max(...stats.bySource.map(([, count]) => count), 1)
+  const maxCount = Math.max(...stats.byStatus.map((s) => s.count), 1)
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard label="Total Leads" value={stats.total} icon={Users2} accent="bg-brand-600" />
-        <StatCard label="New Leads" value={stats.newLeads} icon={Sparkles} accent="bg-violet-500" />
-        <StatCard label="Deals Won" value={stats.won} icon={Trophy} accent="bg-emerald-500" />
+        <StatCard
+          label="Open Pipeline Value"
+          value={currency.format(stats.pipelineValue)}
+          icon={DollarSign}
+          accent="bg-violet-500"
+        />
+        <StatCard label="Deals Won" value={stats.won} icon={Trophy} accent="bg-emerald-500" trend={currency.format(stats.wonValue) + ' won'} />
         <StatCard label="Win Rate" value={`${stats.winRate}%`} icon={TrendingUp} accent="bg-amber-500" />
       </div>
 
@@ -67,32 +66,12 @@ export default function Dashboard({ leads, onNavigateToLeads }) {
                 <div className="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
                   <div
                     className={`h-full rounded-full ${STATUS_STYLES[status].dot}`}
-                    style={{ width: `${(count / maxStatusCount) * 100}%` }}
+                    style={{ width: `${(count / maxCount) * 100}%` }}
                   />
                 </div>
                 <span className="w-6 text-right text-sm font-semibold text-slate-700">{count}</span>
               </div>
             ))}
-          </div>
-
-          <h2 className="text-sm font-semibold text-slate-900 mt-6 mb-4">Leads by Source</h2>
-          <div className="space-y-3">
-            {stats.bySource.length === 0 ? (
-              <p className="text-sm text-slate-400">No leads yet.</p>
-            ) : (
-              stats.bySource.map(([source, count]) => (
-                <div key={source} className="flex items-center gap-3">
-                  <div className="w-28 shrink-0 text-xs font-medium text-slate-600 truncate">{source}</div>
-                  <div className="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-brand-500"
-                      style={{ width: `${(count / maxSourceCount) * 100}%` }}
-                    />
-                  </div>
-                  <span className="w-6 text-right text-sm font-semibold text-slate-700">{count}</span>
-                </div>
-              ))
-            )}
           </div>
         </div>
 
@@ -112,6 +91,7 @@ export default function Dashboard({ leads, onNavigateToLeads }) {
                       <p className="text-sm font-medium text-slate-800 truncate">{lead.name}</p>
                       <p className="text-xs text-slate-400 truncate">
                         {lead.company}
+                        {lead.owner ? ` · ${lead.owner}` : ''}
                         {lead.createdAt ? ` · ${dateFmt.format(new Date(lead.createdAt))}` : ''}
                       </p>
                     </div>
